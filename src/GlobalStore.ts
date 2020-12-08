@@ -58,9 +58,10 @@ export class GlobalStore<
 
     if (item) {
       const value = JSON.parse(item) as IState;
-      const newState: IState = isPrimitive(value) ? value : this.formatItemFromStore(value);
+      const primitive = isPrimitive(value);
+      const newState: IState = primitive ? value : this.formatItemFromStore(value);
 
-      this.state = { ...this.state, ...newState };
+      this.state = primitive ? newState : { ...this.state, ...newState };
     }
 
     return this.state;
