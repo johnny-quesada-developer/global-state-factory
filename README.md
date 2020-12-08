@@ -1,7 +1,7 @@
 # global-state-factory
 This is a package to easily handling global-state across your react components No-redux, No-context.
 
-This utility follows the same style as the default useState hook, this is in order to be an intuitive option to help you to quickly migrate from complex options as redux to the new react-hooks.
+This utility follows the same style as the default useState hook, this in order to be an intuitive tool to help you to quickly migrate from complex options as redux to the new react-hooks.
 
 ## Creating a global store, an a simple hook
 
@@ -34,11 +34,11 @@ function Stage2() {
   return (<button onPress={onClick}>count: {count}<button/>);
 }
 ```
-That's, you are using a global state. Note that the only difference between this and the default useState hook is that you are not adding the initial value, cause you already did that when you created the store. 
+Just like that, you are using a global state. Note that the only difference between this and the default useState hook is that you are not adding the initial value, cause you already did that when you created the store. 
 
 ## Persisted store
 
-You could persist the state in the local-storage by just adding a name to the constructor of your global-state let's see.
+You could persist the state in the local-storage by just adding a name to the constructor of your global-store let's see.
 ```
 const countStore = new GlobalStore(0, null, 'GLOBAL_COUNT');
 ```
@@ -48,6 +48,7 @@ const countStore = new GlobalStore(0, null, 'GLOBAL_COUNT');
 Let's say you want to have a STATE with a specific set of actions that you could reuse. With this library is pretty easy to accomplish. Let's create **plus** and **decrease** actions to our COUNT-store. **count.ts**:
 
 ```
+import * as IGlobalState from 'global-state-factory/lib/GlobalStoreTypes';
 import GlobalStore from 'global-state-factory';
 
 const countStore = new GlobalStore(0, {
@@ -94,13 +95,13 @@ export interface ICountActions {
 
 export const useCount = countStore.getHook<ICountActions>();
 ```
-The above step is necessary to get the correct typing of the parameters of your actions. The above step is necessary to get the correct typing of the parameters of your actions, otherwise, you'll get the name of the actions but the parameters would be all ANY
+The above step is necessary to get the correct typing of the parameters of your actions. The above step is necessary to get the correct typing of the parameters of your actions, otherwise, you'll get the name of the actions but the parameters would be all TYPE-ANY
 
 ## Decoupled hook
 
 Finally, if you want to access the global state outside a component, or without subscribing the component to the state changes... 
 
-This is especially useful when you want to reuse an action into another one, or when you wrote components that have edition access to a certain store, but they actually don't need to be reactive to the state changes, like a search component, that just need to get the current state every time is gonna search the data, but actually don't need to hear all changes over the collection he is gonna be filtering. 
+This is especially useful when you want to reuse an action into another one, or when you wrote components that have edition access to a certain store, but they actually don't need to be reactive to the state changes, like a search component that just need to get the current state every time is gonna search the data, but actually don't need to hear all changes over the collection he is gonna be filtering. 
 ```
 export const useCount = countStore.getHook<ICountActions>();
 export const useCountDecoupled = countStore.getHookDecoupled<ICountActions>();
@@ -141,3 +142,4 @@ This utility is just including the implementation of the use state into a subscr
 3. Added availability to create actions and decoupled access to the states, no more connects, and dispatches, just call your actions as a normal service of whatever other libraries.
 4. This library is already taking care of avoiding re-renders if the new state does not have changes
 5. This library also is taking care of batching multiple stores updates by using **React unstable_batchedUpdates**; this is a problem that the **useState** have when you call multiple **setStates** into async flows as setTimeout
+6. This tool also take care for you to avoid localStorage data to lose the data types that you stored. For example when you are using datetimes
