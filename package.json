@@ -1,6 +1,6 @@
 {
   "name": "global-state-factory",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "This is a package to easily handling global-state across your react components No-redux, No-context.",
   "main": "lib/GlobalStore.js",
   "files": [
@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.20",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1"
+    "react": "workspace:*",
+    "react-dom": "workspace:*"
   }
 }
