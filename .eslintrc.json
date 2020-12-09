@@ -182,6 +182,18 @@
                 "no-shadow": "off",
                 "no-unused-vars": "off"
             }
+        },
+        {
+            "files": [
+                "*.test.tsx",
+                "*.test.ts"
+            ],
+            "rules": {
+                "max-nested-callbacks": [
+                    "error",
+                    5
+                ]
+            }
         }
     ],
     "ignorePatterns": [ "node_modules/*", "public/*" ] 

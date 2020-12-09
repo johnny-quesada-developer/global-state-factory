@@ -1,6 +1,10 @@
+/**
+* @param {StateSetter<IState>} setter - add a new value to the state
+* @returns {Promise<void>} result - resolves when update_batches finished
+*/
 export type StateSetter<IState> = (
-  setter: Partial<IState> | ((state: IState) => Partial<IState>),
-) => void;
+  setter: Partial<IState> | ((state: IState) => Partial<IState>)
+) => Promise<void>;
 
 /**
 * This is the structure required by the API actions in order to be able to capture action parameters and inject state setter into actions.

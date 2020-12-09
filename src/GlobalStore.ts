@@ -80,7 +80,7 @@ export class GlobalStore<
     }, {});
   }
 
-  protected async setStoreItem(): Promise<void> {
+  protected setStoreItem(): void {
     if (this.storedStateItem === this.state) return;
 
     this.storedStateItem = this.state;
@@ -88,7 +88,6 @@ export class GlobalStore<
     const valueToStore = isPrimitive(this.state) ? this.state : this.formatToStore(cloneDeep(this.state));
 
     localStorage.setItem(this.persistStoreAs as string, JSON.stringify(valueToStore));
-    await this.globalSetter(this.state);
   }
 
   protected getPersistStoreValue = (): IState => this.getStoreItem();
@@ -149,9 +148,9 @@ export class GlobalStore<
     if (this.actions) {
       this._stateOrchestrator = this.getActions() as IGlobalStore.ActionCollectionResult<IActions>;
     } else if (this.persistStoreAs) {
-      this._stateOrchestrator = this.globalSetterToPersistStore as IGlobalStore.StateSetter<IState>;
+      this._stateOrchestrator = this.globalSetterToPersistStoreAsync as IGlobalStore.StateSetter<IState>;
     } else {
-      this._stateOrchestrator = this.globalSetter as IGlobalStore.StateSetter<IState>;
+      this._stateOrchestrator = this.globalSetterAsync as IGlobalStore.StateSetter<IState>;
     }
 
     return this._stateOrchestrator as IGlobalStore.StateSetter<IState> | IGlobalStore.ActionCollectionResult<IActions>;
@@ -162,7 +161,7 @@ export class GlobalStore<
    */
   protected static batchedUpdates: [() => void, object, object][] = [];
 
-  protected globalSetter = (setter: Partial<IState> | ((state: IState) => Partial<IState>), callback?: () => void) => {
+  protected globalSetter = (setter: Partial<IState> | ((state: IState) => Partial<IState>), callback: () => void) => {
     const partialState = typeof setter === 'function' ? setter(this.getStateCopy()) : setter;
     let newState = isPrimitive(partialState) ? partialState : { ...this.state, ...partialState };
 
@@ -188,15 +187,15 @@ export class GlobalStore<
 
   protected globalSetterAsync =
     async (setter: Partial<IState> | ((state: IState) => Partial<IState>)):
-    Promise<void> => new Promise((resolve) => this.globalSetter(setter, async () => resolve()));
+    Promise<void> => new Promise((resolve) => this.globalSetter(setter, () => resolve()));
 
-  protected globalSetterToPersistStore = async (setter: Partial<IState> | ((state: IState) => Partial<IState>)): Promise<void> => {
+  protected globalSetterToPersistStoreAsync = async (setter: Partial<IState> | ((state: IState) => Partial<IState>)): Promise<void> => {
     await this.globalSetterAsync(setter);
-    await this.setStoreItem();
+    this.setStoreItem();
   };
 
   // avoid multiples calls to batchedUpdates
-  static ExecutePendingBatches = debounce((callback: () => void = () => {}) => {
+  static ExecutePendingBatches = debounce((callback: () => void) => {
     const reactBatchedUpdates = ReactDOM.unstable_batchedUpdates || ((mock: () => void) => mock());
 
     reactBatchedUpdates(() => {
@@ -204,21 +203,31 @@ export class GlobalStore<
         execute();
       });
       GlobalStore.batchedUpdates = [];
+      callback();
     });
-
-    callback();
   }, 0);
 
   protected getActions = <IApi extends IGlobalStore.ActionCollectionResult<IGlobalStore.IActionCollection<IState>>>(): IApi => {
     const actions = this.actions as IGlobalStore.IActionCollection<IState>;
     // Setter is allways async because of the render batch
-    // but we are typing the setter as synchronous to avoid the developer has extra complexity that useState do not handle
-    const setter = this.isPersistStore ? this.globalSetterToPersistStore : this.globalSetterAsync;
+    const setter = this.isPersistStore ? this.globalSetterToPersistStoreAsync : this.globalSetterAsync;
 
     return Object.keys(actions).reduce(
       (accumulator, key) => ({
         ...accumulator,
-        [key]: (...parameres: unknown[]) => actions[key](...parameres)(setter as IGlobalStore.StateSetter<IState>, this.getStateCopy()),
+        [key]: async (...parameres: unknown[]) => {
+          let promise;
+          const setterWrapper: IGlobalStore.StateSetter<IState> = (value: Partial<IState> | ((state: IState) => Partial<IState>)) => {
+            promise = setter(value);
+            return promise;
+          };
+          const result = actions[key](...parameres)(setterWrapper, this.getStateCopy());
+          const resultPromise = Promise.resolve(result) === result ? result : Promise.resolve();
+
+          await Promise.all([promise, resultPromise]);
+
+          return result;
+        },
       }),
       {} as IApi,
     );
